@@ -1,2 +1,5 @@
 streamlit
 Pillow
+opencv-python-headless
+ultralytics
+numpy<2
