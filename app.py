@@ -1,54 +1,292 @@
 import streamlit as st
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import tempfile
 import os
 import time
 
 st.set_page_config(
-    page_title="Mango Tree Counter",
-    page_icon="🌴",
+    page_title="MangoSense · Tree Counter",
+    page_icon="🥭",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
-.stApp { background: linear-gradient(160deg, #071a09 0%, #0d2b12 60%, #0f3016 100%); min-height: 100vh; }
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, [class*="css"] { font-family: 'Outfit', sans-serif; }
+
+.stApp {
+    background: #fdf6ec;
+    background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,180,30,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 90% 110%, rgba(255,120,20,0.12) 0%, transparent 65%);
+    min-height: 100vh;
+}
+
 header[data-testid="stHeader"] { background: transparent; }
-.hero { text-align: center; padding: 3rem 1rem 1.5rem; }
-.hero-badge { display: inline-block; background: rgba(134,239,92,0.1); border: 1px solid rgba(134,239,92,0.3); color: #86ef5c; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; padding: 4px 14px; border-radius: 999px; margin-bottom: 14px; }
-.hero h1 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5vw, 3.4rem); font-weight: 800; color: #f0fdf0; line-height: 1.1; margin: 0 0 10px; }
-.hero h1 span { color: #86ef5c; }
-.hero p { color: rgba(210,252,210,0.45); font-size: 1rem; max-width: 480px; margin: 0 auto; }
-.steps-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 1.8rem auto; max-width: 860px; }
-.step-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(134,239,92,0.12); border-radius: 14px; padding: 14px 18px; flex: 1; min-width: 160px; max-width: 220px; }
-.step-num { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; color: rgba(134,239,92,0.35); margin-bottom: 4px; }
-.step-title { font-size: 0.82rem; font-weight: 500; color: #b6f5b6; margin-bottom: 3px; }
-.step-desc { font-size: 0.72rem; color: rgba(210,252,210,0.4); line-height: 1.5; }
-.metrics-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 1.2rem auto 1.8rem; max-width: 700px; }
-.metric-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(134,239,92,0.18); border-radius: 14px; padding: 14px 24px; text-align: center; min-width: 140px; }
-.metric-val { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: #86ef5c; line-height: 1; }
-.metric-lbl { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(210,252,210,0.38); margin-top: 4px; }
-.upload-wrap { max-width: 660px; margin: 0 auto 2rem; }
-[data-testid="stFileUploader"] { background: rgba(255,255,255,0.025) !important; border: 2px dashed rgba(134,239,92,0.28) !important; border-radius: 16px !important; padding: 2rem !important; }
-[data-testid="stFileUploader"] label { color: rgba(210,252,210,0.65) !important; }
-.divider { border: none; border-top: 1px solid rgba(134,239,92,0.1); margin: 1.6rem 0; }
-.rc { background: rgba(255,255,255,0.035); border: 1px solid rgba(134,239,92,0.1); border-radius: 18px; overflow: hidden; margin-bottom: 1.4rem; }
-.rc-head { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; background: rgba(134,239,92,0.05); border-bottom: 1px solid rgba(134,239,92,0.08); }
-.rc-name { font-family: 'Syne', sans-serif; font-weight: 700; color: #d1fad1; font-size: 0.88rem; }
-.count-pill { background: #86ef5c; color: #071a09; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.78rem; padding: 3px 12px; border-radius: 999px; }
-.img-lbl { font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(210,252,210,0.35); margin-bottom: 5px; }
-.total-banner { background: linear-gradient(90deg, rgba(134,239,92,0.14), rgba(134,239,92,0.04)); border: 1px solid rgba(134,239,92,0.3); border-radius: 18px; padding: 1.6rem 2rem; text-align: center; margin: 0.5rem auto 2rem; max-width: 420px; }
-.total-num { font-family: 'Syne', sans-serif; font-size: 3.2rem; font-weight: 800; color: #86ef5c; line-height: 1; }
-.total-lbl { color: rgba(210,252,210,0.55); font-size: 0.9rem; margin-top: 6px; }
-div[data-testid="stImage"] img { border-radius: 10px; width: 100%; }
-.stProgress > div > div { background: #86ef5c !important; }
+
+/* ── HERO ── */
+.hero-wrap {
+    position: relative;
+    text-align: center;
+    padding: 4rem 1rem 2.5rem;
+    overflow: hidden;
+}
+.hero-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+    z-index: 0;
+}
+.orb-a { width: 340px; height: 340px; background: rgba(255,180,30,0.22); top: -80px; left: 50%; transform: translateX(-50%); }
+.orb-b { width: 200px; height: 200px; background: rgba(255,110,20,0.13); top: 20px; left: 15%; }
+.orb-c { width: 180px; height: 180px; background: rgba(230,200,50,0.15); top: 40px; right: 12%; }
+.hero-inner { position: relative; z-index: 1; }
+
+.brand-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(230,150,20,0.35);
+    border-radius: 999px;
+    padding: 5px 16px 5px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #b56a00;
+    margin-bottom: 22px;
+    backdrop-filter: blur(8px);
+}
+.brand-chip .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #f59e0b;
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+}
+
+.hero-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2.4rem, 5.5vw, 4rem);
+    font-weight: 900;
+    color: #1a1008;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin-bottom: 18px;
+}
+.hero-title .accent { color: #e07b00; }
+.hero-title .light { color: #7c5e2a; }
+
+.hero-sub {
+    font-size: 1.02rem;
+    font-weight: 300;
+    color: #7c5e2a;
+    max-width: 500px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.65;
+}
+
+/* ── STAT PILLS ── */
+.stat-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 2.8rem;
+}
+.stat-pill {
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(230,150,20,0.28);
+    border-radius: 12px;
+    padding: 12px 22px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    min-width: 130px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-pill:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(180,100,0,0.12); }
+.stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #d97706;
+    line-height: 1;
+}
+.stat-lbl {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #a07830;
+    margin-top: 4px;
+}
+
+/* ── DIVIDER ── */
+.mango-divider {
+    display: flex; align-items: center; gap: 12px;
+    max-width: 680px; margin: 0 auto 2.2rem;
+}
+.mango-divider::before, .mango-divider::after {
+    content: ''; flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,130,20,0.3), transparent);
+}
+.divider-icon { font-size: 1.1rem; }
+
+/* ── UPLOAD BOX ── */
+.upload-section { max-width: 680px; margin: 0 auto 2.5rem; }
+
+[data-testid="stFileUploader"] {
+    background: rgba(255,255,255,0.65) !important;
+    border: 2px dashed rgba(215,140,20,0.45) !important;
+    border-radius: 20px !important;
+    padding: 2.2rem 2rem !important;
+    backdrop-filter: blur(12px) !important;
+    transition: border-color 0.25s !important;
+}
+[data-testid="stFileUploader"]:hover {
+    border-color: rgba(215,140,20,0.75) !important;
+}
+[data-testid="stFileUploader"] label {
+    color: #7c5e2a !important;
+    font-weight: 400 !important;
+}
+
+/* ── RESULTS ── */
+.results-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1a1008;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.result-card {
+    background: rgba(255,255,255,0.78);
+    border: 1px solid rgba(215,150,20,0.22);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 1.6rem;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 20px rgba(180,100,0,0.06);
+    transition: box-shadow 0.25s;
+}
+.result-card:hover { box-shadow: 0 6px 32px rgba(180,100,0,0.13); }
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 18px;
+    background: linear-gradient(90deg, rgba(255,200,60,0.12), rgba(255,140,20,0.06));
+    border-bottom: 1px solid rgba(215,150,20,0.15);
+}
+.card-filename {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #3d2800;
+}
+.count-badge {
+    background: linear-gradient(135deg, #f59e0b, #e07b00);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 4px 14px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+}
+
+.img-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #a07830;
+    margin-bottom: 6px;
+}
+
+/* ── TOTAL BANNER ── */
+.total-banner {
+    max-width: 520px;
+    margin: 0.5rem auto 3rem;
+    background: linear-gradient(135deg, #fff8e6 0%, #fff3d4 100%);
+    border: 2px solid rgba(215,150,20,0.4);
+    border-radius: 24px;
+    padding: 2.4rem 2rem;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(180,100,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+.total-banner::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 140px; height: 140px;
+    background: radial-gradient(circle, rgba(255,200,60,0.3), transparent 70%);
+    border-radius: 50%;
+}
+.total-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: -20px;
+    width: 100px; height: 100px;
+    background: radial-gradient(circle, rgba(255,140,20,0.2), transparent 70%);
+    border-radius: 50%;
+}
+.total-emoji { font-size: 2.2rem; margin-bottom: 8px; }
+.total-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 4rem;
+    font-weight: 900;
+    color: #c96b00;
+    line-height: 1;
+    margin-bottom: 6px;
+    position: relative; z-index: 1;
+}
+.total-sub {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #9a6c20;
+    position: relative; z-index: 1;
+}
+.total-images-note {
+    font-size: 0.72rem;
+    color: #c4922a;
+    margin-top: 6px;
+    position: relative; z-index: 1;
+    letter-spacing: 0.06em;
+}
+
+/* ── PROGRESS ── */
+.stProgress > div > div { background: linear-gradient(90deg, #f59e0b, #e07b00) !important; border-radius: 999px !important; }
+
+/* ── EMPTY STATE ── */
+.empty-hint {
+    text-align: center;
+    color: #c4922a;
+    font-size: 0.88rem;
+    margin-top: 0.8rem;
+    opacity: 0.7;
+}
+
+div[data-testid="stImage"] img { border-radius: 12px; width: 100%; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Load model — import torch directly, skip cv2 entirely ─────────────────────
+
+# ── Model loader ──────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
     import torch
@@ -56,60 +294,72 @@ def load_model():
     model = YOLO("best.pt")
     return model
 
+
 def draw_boxes(image: Image.Image, boxes) -> Image.Image:
-    """Draw bounding boxes using PIL only — zero cv2 needed."""
     img = image.copy().convert("RGB")
     draw = ImageDraw.Draw(img)
     for box in boxes:
         x1, y1, x2, y2 = [int(v) for v in box.xyxy[0].tolist()]
-        draw.rectangle([x1, y1, x2, y2], outline="#00ff00", width=3)
-        draw.rectangle([x1, y1, x1 + 55, y1 + 16], fill="#00ff00")
-        draw.text((x1 + 3, y1 + 1), "Tree", fill="#000000")
+        # Outer glow effect (layered rects)
+        for offset, alpha in [(4, 40), (2, 80)]:
+            draw.rectangle(
+                [x1 - offset, y1 - offset, x2 + offset, y2 + offset],
+                outline=(255, 160, 20, alpha), width=1
+            )
+        draw.rectangle([x1, y1, x2, y2], outline="#e07b00", width=3)
+        # Label pill
+        draw.rectangle([x1, y1 - 22, x1 + 62, y1], fill="#e07b00")
+        draw.text((x1 + 5, y1 - 18), "🥭 Tree", fill="#ffffff")
     return img
 
-# ── Hero ──────────────────────────────────────────────────────────────────────
+
+# ── HERO ─────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="hero">
-  <div class="hero-badge">YOLOv8 · Roboflow · Ultralytics</div>
-  <h1>Mango Tree<br><span>Detection & Counter</span></h1>
-  <p>Upload one or more field or aerial images — the AI model will detect and count every mango tree automatically.</p>
+<div class="hero-wrap">
+  <div class="hero-orb orb-a"></div>
+  <div class="hero-orb orb-b"></div>
+  <div class="hero-orb orb-c"></div>
+  <div class="hero-inner">
+    <div class="brand-chip"><span class="dot"></span>MangoSense AI · YOLOv8</div>
+    <h1 class="hero-title">
+      Detect Every<br>
+      <span class="accent">Mango Tree</span><br>
+      <span class="light">Instantly</span>
+    </h1>
+    <p class="hero-sub">
+      Upload field or aerial images — our trained AI model identifies and counts every mango tree with precision.
+    </p>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<div class="steps-row">
-  <div class="step-card"><div class="step-num">01</div><div class="step-title">📸 150 Photos Captured</div><div class="step-desc">Field images of mango trees collected and organised.</div></div>
-  <div class="step-card"><div class="step-num">02</div><div class="step-title">🏷️ Annotated on Roboflow</div><div class="step-desc">Drew bounding boxes around every tree to create the labelled dataset.</div></div>
-  <div class="step-card"><div class="step-num">03</div><div class="step-title">🧠 Trained YOLOv8</div><div class="step-desc">Ran 50 epochs on Google Colab using the annotated dataset.</div></div>
-  <div class="step-card"><div class="step-num">04</div><div class="step-title">🌴 Detect & Count</div><div class="step-desc">Upload any new image and the trained model counts trees instantly.</div></div>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
-
-st.markdown('<div class="upload-wrap">', unsafe_allow_html=True)
+# ── UPLOAD ────────────────────────────────────────────────────────────────────
+st.markdown('<div class="upload-section">', unsafe_allow_html=True)
 uploaded_files = st.file_uploader(
-    "Upload mango tree images (JPG / PNG)",
+    "Drop your mango field images here (JPG / PNG)",
     type=["jpg", "jpeg", "png"],
     accept_multiple_files=True,
+    label_visibility="visible",
 )
 st.markdown('</div>', unsafe_allow_html=True)
 
+# ── PROCESSING ────────────────────────────────────────────────────────────────
 if uploaded_files:
     model = load_model()
     results_data = []
+
     status = st.empty()
     bar = st.progress(0)
 
     for i, f in enumerate(uploaded_files):
         status.markdown(
-            f"<p style='color:rgba(210,252,210,0.5);text-align:center;font-size:0.84rem;'>"
-            f"Analysing <b style='color:#86ef5c'>{f.name}</b> ...</p>",
+            f"<p style='color:#9a6c20;text-align:center;font-size:0.85rem;padding:0.4rem 0;'>"
+            f"Scanning <b style='color:#e07b00'>{f.name}</b> for mango trees …</p>",
             unsafe_allow_html=True,
         )
         bar.progress(i / len(uploaded_files))
-        image = Image.open(f).convert("RGB")
 
+        image = Image.open(f).convert("RGB")
         with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
             image.save(tmp.name)
             tmp_path = tmp.name
@@ -118,50 +368,87 @@ if uploaded_files:
         count = len(result.boxes)
         annotated = draw_boxes(image, result.boxes)
 
-        results_data.append({"name": f.name, "original": image, "detected": annotated, "count": count})
+        results_data.append({
+            "name": f.name,
+            "original": image,
+            "detected": annotated,
+            "count": count,
+        })
         os.unlink(tmp_path)
 
     bar.progress(1.0)
-    time.sleep(0.3)
+    time.sleep(0.25)
     status.empty()
     bar.empty()
 
+    # ── SUMMARY METRICS ──────────────────────────────────────────────────────
     total = sum(r["count"] for r in results_data)
     n_imgs = len(results_data)
     avg = round(total / n_imgs, 1) if n_imgs else 0
+    highest = max(results_data, key=lambda r: r["count"])
 
     st.markdown(f"""
-    <div class="metrics-row">
-      <div class="metric-card"><div class="metric-val">{total}</div><div class="metric-lbl">Trees Detected</div></div>
-      <div class="metric-card"><div class="metric-val">{n_imgs}</div><div class="metric-lbl">Images Analysed</div></div>
-      <div class="metric-card"><div class="metric-val">{avg}</div><div class="metric-lbl">Avg per Image</div></div>
+    <div class="stat-row">
+      <div class="stat-pill">
+        <div class="stat-num">{total}</div>
+        <div class="stat-lbl">Trees Found</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-num">{n_imgs}</div>
+        <div class="stat-lbl">Images Scanned</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-num">{avg}</div>
+        <div class="stat-lbl">Avg / Image</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-num">{highest['count']}</div>
+        <div class="stat-lbl">Most in One Image</div>
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
-    st.markdown("<h3 style='font-family:Syne,sans-serif;color:#d1fad1;font-size:1.1rem;margin-bottom:1rem;'>Detection Results</h3>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="mango-divider">
+      <span class="divider-icon">🥭</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── PER-IMAGE RESULTS ────────────────────────────────────────────────────
+    st.markdown('<p class="results-heading">🔍 Detection Results</p>', unsafe_allow_html=True)
 
     for r in results_data:
         st.markdown(f"""
-        <div class="rc"><div class="rc-head">
-          <span class="rc-name">{r['name']}</span>
-          <span class="count-pill">🌴 {r['count']} trees</span>
-        </div></div>
+        <div class="result-card">
+          <div class="card-header">
+            <span class="card-filename">{r['name']}</span>
+            <span class="count-badge">🥭 {r['count']} {'tree' if r['count'] == 1 else 'trees'} detected</span>
+          </div>
+        </div>
         """, unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
+
+        col1, col2 = st.columns(2, gap="medium")
         with col1:
-            st.markdown('<p class="img-lbl">Original</p>', unsafe_allow_html=True)
+            st.markdown('<p class="img-label">Original Image</p>', unsafe_allow_html=True)
             st.image(r["original"], use_column_width=True)
         with col2:
-            st.markdown('<p class="img-lbl">Detected</p>', unsafe_allow_html=True)
+            st.markdown('<p class="img-label">AI Detection Overlay</p>', unsafe_allow_html=True)
             st.image(r["detected"], use_column_width=True)
-        st.markdown("<div style='margin-bottom:1.2rem'></div>", unsafe_allow_html=True)
 
+        st.markdown("<div style='margin-bottom:0.4rem'></div>", unsafe_allow_html=True)
+
+    # ── TOTAL BANNER ─────────────────────────────────────────────────────────
     st.markdown(f"""
     <div class="total-banner">
-      <div class="total-num">🌴 {total}</div>
-      <div class="total-lbl">Total Mango Trees Detected Across All Images</div>
+      <div class="total-emoji">🥭</div>
+      <div class="total-num">{total}</div>
+      <div class="total-sub">Total Mango Trees Detected</div>
+      <div class="total-images-note">Across all {n_imgs} uploaded {'image' if n_imgs == 1 else 'images'}</div>
     </div>
     """, unsafe_allow_html=True)
+
 else:
-    st.markdown("<p style='text-align:center;color:rgba(210,252,210,0.28);font-size:0.88rem;margin-top:0.5rem;'>Upload one or more images above to start detection.</p>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='empty-hint'>Upload one or more field images above to begin detection.</p>",
+        unsafe_allow_html=True,
+    )
