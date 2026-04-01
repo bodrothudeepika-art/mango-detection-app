@@ -243,4 +243,3 @@ with right_col:
 
 st.markdown('<div class="footer">Mango Tree Counter | Powered by YOLOv8 & Streamlit</div>', unsafe_allow_html=True)
 "@
-
